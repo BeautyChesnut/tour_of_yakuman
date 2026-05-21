@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "役满之旅",
+  "usingComponents": {
+    "scoring-result": "/components/scoring-result/index",
+    "table-context": "/components/table-context/index",
+    "tile-face": "/components/tile-face/index",
+    "state-badge": "/components/state-badge/index",
+    "tile-input": "/components/tile-input/index"
+  }
+}

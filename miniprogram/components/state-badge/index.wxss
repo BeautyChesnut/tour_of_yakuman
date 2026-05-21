@@ -1,0 +1,45 @@
+.state-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36rpx;
+  height: 36rpx;
+  padding: 0 8rpx;
+  box-sizing: border-box;
+  border-radius: 8rpx;
+  background: #e9eee8;
+  color: #46515f;
+  font-size: 20rpx;
+  font-weight: 800;
+  line-height: 36rpx;
+}
+
+.seat {
+  background: #184c3a;
+  color: #fff;
+}
+
+.dealer {
+  background: #f5c542;
+  color: #493600;
+}
+
+.riichi {
+  background: #c9342b;
+  color: #fff;
+}
+
+.winner {
+  background: #fff1b8;
+  color: #7a4b00;
+}
+
+.discarder {
+  background: #ffe0dc;
+  color: #9f2a2a;
+}
+
+.tenpai {
+  background: #dff3eb;
+  color: #126c4f;
+}

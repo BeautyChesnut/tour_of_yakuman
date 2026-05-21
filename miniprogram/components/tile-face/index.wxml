@@ -1,0 +1,13 @@
+<view class="tile-face {{tileClass}}">
+  <image
+    wx:if="{{imageSrc}}"
+    class="tile-image"
+    src="{{imageSrc}}"
+    mode="aspectFit"
+    binderror="handleImageError"
+  />
+  <block wx:else>
+    <text class="tile-main">{{mainLabel}}</text>
+    <text class="tile-suit" wx:if="{{suitLabel}}">{{suitLabel}}</text>
+  </block>
+</view>

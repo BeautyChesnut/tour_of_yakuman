@@ -1,0 +1,40 @@
+<view class="result" wx:if="{{visible}}">
+  <view class="result-hero">
+    <view>
+      <text class="title">{{title}}</text>
+      <text class="hero-subtitle">本局结果</text>
+    </view>
+    <text class="hero-limit">{{result.limitText || "-"}}</text>
+  </view>
+
+  <view class="primary-block" wx:if="{{result.scoreRows.length}}">
+    <view class="block-title">四家点数</view>
+    <view class="score-row" wx:for="{{result.scoreRows}}" wx:key="seat">
+      <view class="score-seat">
+        <state-badge type="seat" label="{{item.directionLabel}}" />
+        <text>{{item.label}}</text>
+      </view>
+      <text class="score-delta {{item.deltaClass}}">{{item.deltaText}}</text>
+      <text class="score-after">{{item.after}} 点</text>
+      <text class="score-rank">{{item.rankText}}</text>
+    </view>
+  </view>
+
+  <view class="block" wx:if="{{result.yakuLines.length || result.doraLines.length}}">
+    <view class="block-title">番型</view>
+    <view class="detail-total">合计：{{result.han || han}} 番</view>
+    <view class="line" wx:for="{{result.yakuLines}}" wx:key="name">{{item.name}}：{{item.han}} 番</view>
+    <view class="line dora-line" wx:for="{{result.doraLines}}" wx:key="name">
+      {{item.name}}：{{item.han}} 番
+    </view>
+  </view>
+
+  <view class="block" wx:if="{{result.fuLines.length}}">
+    <view class="block-title">符数</view>
+    <view class="detail-total">合计：{{result.fu || fu || "-"}} 符</view>
+    <view class="line secondary-line">基础点：{{result.basePoints || basePoints}}</view>
+    <view class="line" wx:for="{{result.fuLines}}" wx:key="name">{{item.name}}：{{item.fu}} 符</view>
+  </view>
+
+  <view class="warning" wx:for="{{result.warnings || warnings}}" wx:key="*this">{{item}}</view>
+</view>

@@ -1,0 +1,40 @@
+<view class="tile-input {{expanded ? 'tile-input-expanded' : ''}}">
+  <view class="section-header" bindtap="handleHeaderTap">
+    <view>
+      <text class="section-title">{{title}}</text>
+      <text class="section-hint">{{hint}}</text>
+    </view>
+    <text class="section-state">{{expanded ? "正在编辑" : "点按编辑"}}</text>
+  </view>
+
+  <view class="slot-grid">
+    <button
+      wx:for="{{slots}}"
+      wx:key="index"
+      class="tile-slot {{expanded && activeIndex === index ? 'tile-slot-active' : ''}}"
+      data-index="{{index}}"
+      bindtap="handleSlotTap"
+    >
+      {{item.label || ""}}
+    </button>
+  </view>
+
+  <view class="tile-palette" wx:if="{{expanded}}">
+    <view class="tile-row" wx:for="{{tileRows}}" wx:key="key">
+      <text class="tile-row-label">{{item.label}}</text>
+      <view class="tile-row-options">
+        <button
+          wx:for="{{item.tiles}}"
+          wx:for-item="tileItem"
+          wx:key="tile"
+          class="tile-option"
+          data-tile="{{tileItem.tile}}"
+          bindtap="handleTileTap"
+        >
+          {{tileItem.label}}
+        </button>
+      </view>
+    </view>
+    <button class="tile-option tile-clear" bindtap="handleClearTap">清空</button>
+  </view>
+</view>

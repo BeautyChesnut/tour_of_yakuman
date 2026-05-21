@@ -1,0 +1,11 @@
+{
+  "pages": ["pages/scoring/index", "pages/debug/riichi-test/index"],
+  "window": {
+    "navigationBarTitleText": "役满之旅",
+    "navigationBarBackgroundColor": "#184C3A",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#F6F2EA"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

@@ -1,0 +1,361 @@
+<view class="page">
+  <view wx:if="{{editing}}" class="workbench">
+    <view class="context-bar">
+      <view class="context-main">
+        <view class="context-line context-round-line">
+          <text class="context-icon">局</text>
+          <text class="round-label">{{roundLabel}}</text>
+        </view>
+        <view class="context-line context-meta-line">
+          <view class="context-chip">
+            <image class="context-chip-image" src="/assets/icons/icon-honba.svg" mode="aspectFit" />
+            <text>{{honba}}</text>
+          </view>
+          <view class="context-chip">
+            <image class="context-chip-image" src="/assets/icons/icon-riichi-stick.svg" mode="aspectFit" />
+            <text>{{riichiSticks}}</text>
+          </view>
+        </view>
+      </view>
+      <view class="context-actions">
+        <view class="context-tool" aria-label="记录" bindtap="handleShowRecords">
+          <image class="button-icon-image" src="/assets/icons/icon-record.svg" mode="aspectFit" />
+        </view>
+        <view class="context-tool" aria-label="回退" bindtap="handleRollback">
+          <image class="button-icon-image" src="/assets/icons/icon-rollback.svg" mode="aspectFit" />
+        </view>
+        <view class="context-tool context-tool-danger" aria-label="重置" bindtap="handleReset">
+          <image class="button-icon-image" src="/assets/icons/icon-reset.svg" mode="aspectFit" />
+        </view>
+      </view>
+    </view>
+
+    <view class="table-zone">
+      <view
+        wx:for="{{tableSeats}}"
+        wx:key="seat"
+        class="seat-card {{item.className}}"
+        data-seat="{{item.seat}}"
+        bindtap="handleToggleRiichi"
+      >
+        <view class="seat-heading">
+          <view class="seat-identity">
+            <state-badge type="seat" label="{{item.directionLabel}}" />
+            <text class="seat-name">{{item.label}}</text>
+          </view>
+          <view class="seat-badges">
+            <state-badge
+              wx:for="{{item.statusBadges}}"
+              wx:for-item="badge"
+              wx:key="type"
+              type="{{badge.type}}"
+              label="{{badge.label}}"
+            />
+          </view>
+        </view>
+        <text class="seat-points">{{item.points}}</text>
+        <text class="seat-rank">{{item.rankText}}</text>
+        <text class="seat-riichi">{{item.riichiText}}</text>
+      </view>
+      <view class="table-center">
+        <text>桌心</text>
+        <text>{{eventTypeOptions[eventTypeIndex].label}}</text>
+      </view>
+    </view>
+
+    <view class="settlement-zone">
+      <view
+        wx:for="{{summaryRows}}"
+        wx:key="title"
+        class="summary-row"
+        data-panel="{{item.key}}"
+        bindtap="handleOpenPanel"
+      >
+        <text class="summary-title">{{item.title}}</text>
+        <text class="summary-value">{{item.value}}</text>
+      </view>
+
+      <view class="error-panel" wx:if="{{errors.length}}">
+        <view class="error-line" wx:for="{{errors}}" wx:key="*this">{{item}}</view>
+      </view>
+
+      <button class="primary-button" bindtap="handlePrepareSettlement">确定结算</button>
+    </view>
+  </view>
+
+  <view wx:else class="result-page">
+    <scoring-result visible="{{true}}" title="本局结算" result="{{resultView}}" />
+    <view class="result-actions">
+      <button class="secondary-button result-action-button" bindtap="handleEditResult">返回修改</button>
+      <button class="primary-button result-action-button" bindtap="handleNewInput">继续录入</button>
+    </view>
+  </view>
+
+  <view class="sheet-mask" wx:if="{{editingPanel !== 'none'}}" bindtap="handleClosePanel"></view>
+
+  <view class="bottom-sheet" wx:if="{{editingPanel === 'round-event'}}">
+    <view class="sheet-header">
+      <text class="sheet-title">本局事件</text>
+    </view>
+
+    <view class="segmented">
+      <view
+        wx:for="{{eventTypeOptions}}"
+        wx:key="key"
+        class="segment {{eventType === item.key ? 'segment-active' : ''}}"
+        data-type="{{item.key}}"
+        bindtap="handleEventTypeTap"
+      >
+        {{item.label}}
+      </view>
+    </view>
+
+    <view wx:if="{{eventType !== 'draw'}}" class="event-choice-block">
+      <text class="field-label">和牌者</text>
+      <radio-group class="radio-row seat-radio-row" bindchange="handleWinnerRadioChange">
+        <label class="radio-item seat-radio-item" wx:for="{{pointRows}}" wx:key="seat">
+          <radio value="{{item.seat}}" checked="{{winner === item.seat}}" />
+          <text>{{item.label}}</text>
+        </label>
+      </radio-group>
+    </view>
+
+    <view wx:if="{{eventType === 'ron'}}" class="event-choice-block">
+      <text class="field-label">放铳者</text>
+      <radio-group class="radio-row seat-radio-row" bindchange="handleDiscarderRadioChange">
+        <label class="radio-item seat-radio-item" wx:for="{{pointRows}}" wx:key="seat">
+          <radio value="{{item.seat}}" checked="{{discarder === item.seat}}" />
+          <text>{{item.label}}</text>
+        </label>
+      </radio-group>
+    </view>
+
+    <checkbox-group wx:if="{{eventType === 'draw'}}" class="checkbox-list" bindchange="handleTenpaiChange">
+      <label class="check-row" wx:for="{{tenpaiRows}}" wx:key="seat">
+        <checkbox value="{{item.seat}}" checked="{{item.checked}}" />
+        <text>{{item.label}}听牌</text>
+      </label>
+    </checkbox-group>
+  </view>
+
+  <view class="bottom-sheet" wx:if="{{editingPanel === 'scene-yaku'}}">
+    <view class="sheet-header">
+      <text class="sheet-title">场面番型</text>
+    </view>
+    <view class="scene-section-title">立直状态</view>
+    <radio-group class="radio-row" bindchange="handleRiichiStateChange">
+      <label class="radio-item" wx:for="{{riichiStateOptions}}" wx:key="key">
+        <radio value="{{item.key}}" checked="{{item.checked}}" />
+        <text>{{item.label}}</text>
+      </label>
+    </radio-group>
+
+    <view class="scene-section-title">特殊和牌方式</view>
+    <radio-group class="radio-row timing-radio-row" bindchange="handleTimingConditionChange">
+      <label class="radio-item" wx:for="{{timingConditionOptions}}" wx:key="key">
+        <radio value="{{item.key}}" checked="{{item.checked}}" />
+        <text>{{item.label}}</text>
+      </label>
+    </radio-group>
+
+    <view class="scene-section-title">起手役满</view>
+    <radio-group class="radio-row" bindchange="handleOpeningYakumanChange">
+      <label class="radio-item" wx:for="{{openingYakumanOptions}}" wx:key="key">
+        <radio value="{{item.key}}" checked="{{item.checked}}" />
+        <text>{{item.label}}</text>
+      </label>
+    </radio-group>
+
+    <view class="scene-section-title">附加条件</view>
+    <checkbox-group class="condition-grid" bindchange="handleBonusConditionChange">
+      <label class="condition" wx:for="{{bonusConditionOptions}}" wx:key="key">
+        <checkbox value="{{item.key}}" checked="{{item.checked}}" disabled="{{item.disabled}}" />
+        <text>{{item.label}}</text>
+      </label>
+    </checkbox-group>
+  </view>
+
+  <view class="bottom-sheet tile-sheet" wx:if="{{editingPanel === 'hand'}}">
+    <view class="sheet-header">
+      <text class="sheet-title">手牌与和牌张</text>
+    </view>
+    <view class="hand-strip">
+      <view
+        wx:for="{{handSlotViews}}"
+        wx:key="index"
+        class="mini-slot {{item.winning ? 'winning' : ''}} {{item.active ? 'mini-slot-active' : ''}}"
+        data-area="{{item.area}}"
+        data-index="{{item.index}}"
+        bindtap="handleDoraSlotTap"
+      >
+        <tile-face
+          tile="{{item.tile}}"
+          label="{{item.label}}"
+          empty-text="{{item.winning ? '胡' : ''}}"
+          active="{{item.active}}"
+          winning="{{item.winning}}"
+          size="compact"
+        />
+      </view>
+    </view>
+    <view class="dora-palette hand-palette">
+      <view class="dora-palette-row" wx:for="{{handTileRows}}" wx:key="key">
+        <text class="dora-row-label">{{item.label}}</text>
+        <view class="dora-row-options hand-row-options">
+          <view
+            wx:for="{{item.tiles}}"
+            wx:for-item="tileItem"
+            wx:key="tile"
+            class="dora-tile-option"
+            data-tile="{{tileItem.tile}}"
+            bindtap="handleDirectTileTap"
+          >
+            <tile-face tile="{{tileItem.tile}}" label="{{tileItem.label}}" size="compact" />
+          </view>
+        </view>
+      </view>
+      <view class="dora-clear" bindtap="handleDirectTileClearTap">
+        <text class="button-icon">×</text>
+        <text>清空当前格</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="bottom-sheet tile-sheet" wx:if="{{editingPanel === 'dora'}}">
+    <view class="sheet-header">
+      <text class="sheet-title">宝牌指示牌</text>
+    </view>
+    <view class="dora-section">
+      <view class="dora-row-head">
+        <text>宝牌 4 格</text>
+        <text>里宝牌 4 格</text>
+      </view>
+      <view class="dora-slot-row dora-slot-row-combined">
+        <view
+          wx:for="{{doraSlotViews}}"
+          wx:key="index"
+          class="dora-slot {{item.active ? 'dora-slot-active' : ''}}"
+          data-area="doraIndicators"
+          data-index="{{item.index}}"
+          bindtap="handleDoraSlotTap"
+        >
+          <tile-face tile="{{item.tile}}" label="{{item.label}}" active="{{item.active}}" size="compact" />
+        </view>
+        <view
+          wx:for="{{uraDoraSlotViews}}"
+          wx:key="index"
+          class="dora-slot {{item.active ? 'dora-slot-active' : ''}}"
+          data-area="uraDoraIndicators"
+          data-index="{{item.index}}"
+          bindtap="handleDoraSlotTap"
+        >
+          <tile-face tile="{{item.tile}}" label="{{item.label}}" active="{{item.active}}" size="compact" />
+        </view>
+      </view>
+    </view>
+
+    <view class="dora-palette">
+      <view class="dora-palette-row" wx:for="{{doraTileRows}}" wx:key="key">
+        <text class="dora-row-label">{{item.label}}</text>
+        <view class="dora-row-options">
+          <view
+            wx:for="{{item.tiles}}"
+            wx:for-item="tileItem"
+            wx:key="tile"
+            class="dora-tile-option"
+            data-tile="{{tileItem.tile}}"
+            bindtap="handleDirectTileTap"
+          >
+            <tile-face tile="{{tileItem.tile}}" label="{{tileItem.label}}" size="compact" />
+          </view>
+        </view>
+      </view>
+      <view class="dora-clear" bindtap="handleDirectTileClearTap">
+        <text class="button-icon">×</text>
+        <text>清空当前格</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="bottom-sheet tile-sheet" wx:if="{{editingPanel === 'meld'}}">
+    <view class="sheet-header">
+      <text class="sheet-title">鸣牌</text>
+    </view>
+
+    <view class="meld-grid">
+      <view class="meld-group" wx:for="{{meldGroupViews}}" wx:key="index">
+        <view class="meld-group-head">
+          <text>{{item.title}}</text>
+          <text class="meld-inferred">{{item.inferredText}}</text>
+        </view>
+        <view class="meld-slot-row">
+          <view
+            wx:for="{{item.slots}}"
+            wx:for-item="slot"
+            wx:key="flatIndex"
+            class="meld-slot {{slot.active ? 'meld-slot-active' : ''}}"
+            data-index="{{slot.flatIndex}}"
+            bindtap="handleMeldSlotTap"
+          >
+            <tile-face tile="{{slot.tile}}" label="{{slot.label}}" active="{{slot.active}}" size="compact" />
+          </view>
+        </view>
+        <view class="meld-kan-types" wx:if="{{item.needsKanType}}">
+          <view
+            wx:for="{{kanTypeOptions}}"
+            wx:for-item="typeItem"
+            wx:key="key"
+            class="meld-kan-type {{item.kanType === typeItem.key ? 'meld-kan-type-active' : ''}}"
+            data-group-index="{{item.index}}"
+            data-type="{{typeItem.key}}"
+            bindtap="handleKanTypeTap"
+          >
+            {{typeItem.label}}
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="dora-palette hand-palette">
+      <view class="dora-palette-row" wx:for="{{handTileRows}}" wx:key="key">
+        <text class="dora-row-label">{{item.label}}</text>
+        <view class="dora-row-options hand-row-options">
+          <view
+            wx:for="{{item.tiles}}"
+            wx:for-item="tileItem"
+            wx:key="tile"
+            class="dora-tile-option"
+            data-tile="{{tileItem.tile}}"
+            bindtap="handleDirectTileTap"
+          >
+            <tile-face tile="{{tileItem.tile}}" label="{{tileItem.label}}" size="compact" />
+          </view>
+        </view>
+      </view>
+      <view class="dora-clear" bindtap="handleDirectTileClearTap">
+        <text class="button-icon">×</text>
+        <text>清空当前格</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="bottom-sheet" wx:if="{{editingPanel === 'records'}}">
+    <view class="sheet-header">
+      <text class="sheet-title">结算记录</text>
+    </view>
+    <view wx:if="{{!recordRows.length}}" class="empty-state">暂无记录</view>
+    <view class="record-row" wx:for="{{recordRows}}" wx:key="id">
+      <text class="record-title">{{item.title}}</text>
+      <text class="record-detail">{{item.detail}}</text>
+    </view>
+  </view>
+
+  <view class="confirm-dialog" wx:if="{{editingPanel === 'confirm'}}">
+    <view class="confirm-title">确认结算？</view>
+    <view class="confirm-line" wx:for="{{confirmationLines}}" wx:key="*this">{{item}}</view>
+    <view class="confirm-actions">
+      <button class="secondary-button" bindtap="handleClosePanel">返回修改</button>
+      <button class="primary-button" bindtap="handleConfirmSettlement">确认结算</button>
+    </view>
+  </view>
+</view>

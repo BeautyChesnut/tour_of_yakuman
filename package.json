@@ -1,0 +1,49 @@
+{
+  "name": "tour_of_yakuman",
+  "version": "1.0.0",
+  "description": "微信小程序立直麻将手动算点工具",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev:web": "vite --host 127.0.0.1",
+    "build:web": "vite build",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "tsc --noEmit",
+    "verify:riichi": "vitest run --config vitest.config.ts tests/riichiCompatibility.test.ts",
+    "verify:riichi-bundle": "node scripts/verify-riichi-browser-bundle.cjs",
+    "patch:riichi-miniprogram": "node scripts/patch-riichi-for-miniprogram.cjs",
+    "postinstall": "node scripts/patch-riichi-for-miniprogram.cjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ocean52-XIE/tour_of_yakuman.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Ocean52-XIE/tour_of_yakuman/issues"
+  },
+  "homepage": "https://github.com/Ocean52-XIE/tour_of_yakuman#readme",
+  "dependencies": {
+    "riichi": "^1.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.27.0",
+    "eslint": "^10.4.0",
+    "miniprogram-api-typings": "^4.0.8",
+    "prettier": "^3.8.3",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.59.4",
+    "vite": "^7.2.7",
+    "vitest": "^4.0.13"
+  }
+}

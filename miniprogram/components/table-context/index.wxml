@@ -1,0 +1,24 @@
+<view class="table-context">
+  <view class="seat {{seats[0].className}}">
+    <text>{{seats[0].label}}</text>
+    <text class="role">{{seats[0].role}}</text>
+  </view>
+  <view class="middle-row">
+    <view class="seat {{seats[1].className}}">
+      <text>{{seats[1].label}}</text>
+      <text class="role">{{seats[1].role}}</text>
+    </view>
+    <view class="center">
+      <view class="round">{{roundLabel}}</view>
+      <view class="meta">本场 {{honba}} / 供托 {{riichiSticks}}</view>
+    </view>
+    <view class="seat {{seats[2].className}}">
+      <text>{{seats[2].label}}</text>
+      <text class="role">{{seats[2].role}}</text>
+    </view>
+  </view>
+  <view class="seat {{seats[3].className}}">
+    <text>{{seats[3].label}}</text>
+    <text class="role">{{seats[3].role}}</text>
+  </view>
+</view>
