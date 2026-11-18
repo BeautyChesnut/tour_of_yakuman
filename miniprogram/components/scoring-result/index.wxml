@@ -1,4 +1,4 @@
-<view class="result" wx:if="{{visible}}">
+<view class="result result-theme-{{themeId}}" wx:if="{{visible}}">
   <view class="result-hero">
     <view>
       <text class="title">{{title}}</text>
@@ -26,6 +26,22 @@
     <view class="line" wx:for="{{result.yakuLines}}" wx:key="name">{{item.name}}：{{item.han}} 番</view>
     <view class="line dora-line" wx:for="{{result.doraLines}}" wx:key="name">
       {{item.name}}：{{item.han}} 番
+    </view>
+  </view>
+
+  <view class="block" wx:if="{{result.childResultGroups.length}}">
+    <view class="block-title">和牌明细</view>
+    <view class="child-result" wx:for="{{result.childResultGroups}}" wx:key="winner">
+      <view class="child-result-head">
+        <view class="score-seat">
+          <state-badge type="seat" label="{{item.directionLabel}}" />
+          <text>{{item.label}}</text>
+        </view>
+        <text>{{item.limitText}}</text>
+      </view>
+      <view class="line">番符：{{item.han}} 番 / {{item.fu}} 符</view>
+      <view class="line">{{item.paymentText}}</view>
+      <view class="line secondary-line">{{item.yakuText || "无役种明细"}}</view>
     </view>
   </view>
 

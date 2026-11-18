@@ -10,6 +10,12 @@
     "noEmit": true,
     "types": ["node", "miniprogram-api-typings", "vitest/globals"]
   },
-  "include": ["miniprogram/**/*.ts", "web/**/*.ts", "tests/**/*.ts", "scripts/**/*.ts"],
+  "include": [
+    "miniprogram/**/*.ts",
+    "web/**/*.ts",
+    "tests/**/*.ts",
+    "scripts/**/*.ts",
+    "cloudfunctions/types/**/*.d.ts"
+  ],
   "exclude": ["node_modules", "miniprogram/miniprogram_npm"]
 }

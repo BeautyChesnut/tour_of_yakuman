@@ -1,13 +1,21 @@
 import { describe, expect, it } from "vitest";
 import type { HandInput } from "../../miniprogram/shared/domain/hand";
-import type { DrawRoundInput, RoundInput } from "../../miniprogram/shared/domain/round";
+import type {
+  DrawRoundInput,
+  MultipleRonRoundInput,
+  RoundInput
+} from "../../miniprogram/shared/domain/round";
 import type { ScoringResult } from "../../miniprogram/shared/domain/scoring";
 import {
+  applyMultipleRonSettlement,
   applyDrawSettlement,
+  applyHandPaymentSettlement,
   applyRoundSettlement,
   createDrawSettlementRecord,
   createDefaultPlayerPoints,
+  createMultipleRonSettlementRecord,
   createSettlementRecord,
+  findMultipleRonPriorityWinner,
   replaceRecentSettlement
 } from "../../miniprogram/shared/domain/settlement";
 
@@ -27,6 +35,15 @@ const drawRound: DrawRoundInput = {
   riichiSticks: 2,
   dealer: "east",
   tenpaiSeats: []
+};
+
+const multipleRonRound: MultipleRonRoundInput = {
+  roundWind: "east",
+  honba: 0,
+  riichiSticks: 0,
+  dealer: "east",
+  discarder: "east",
+  winners: ["south", "west"]
 };
 
 const scoring: ScoringResult = {
@@ -120,6 +137,33 @@ describe("本局结算", () => {
     });
   });
 
+  it("三麻自摸时本场只由两名对手额外支付", () => {
+    const result = applyRoundSettlement(
+      {
+        ...round,
+        playerCount: 3,
+        honba: 1,
+        winType: "tsumo",
+        discarder: undefined
+      },
+      {
+        ...scoring,
+        payments: [
+          { from: "east", to: "south", points: 500, reason: "hand" },
+          { from: "west", to: "south", points: 300, reason: "hand" }
+        ]
+      },
+      createDefaultPlayerPoints()
+    );
+
+    expect(result.pointDelta).toEqual({
+      east: -600,
+      south: 1000,
+      west: -400,
+      north: 0
+    });
+  });
+
   it("供托直接加入和牌者收入", () => {
     const result = applyRoundSettlement(
       { ...round, riichiSticks: 2 },
@@ -129,6 +173,53 @@ describe("本局结算", () => {
 
     expect(result.pointDelta.south).toBe(3000);
     expect(result.pointsAfter.south).toBe(28000);
+  });
+
+  it("共享手牌支付结算统一追加荣和本场与供托", () => {
+    const result = applyHandPaymentSettlement(
+      {
+        winner: "south",
+        discarder: "east",
+        winType: "ron",
+        honba: 2,
+        riichiSticks: 1,
+        playerCount: 4
+      },
+      [{ from: "east", to: "south", points: 3900, reason: "hand" }],
+      createDefaultPlayerPoints()
+    );
+
+    expect(result.pointDelta).toEqual({
+      east: -4500,
+      south: 5500,
+      west: 0,
+      north: 0
+    });
+  });
+
+  it("共享手牌支付结算统一追加自摸本场与供托", () => {
+    const result = applyHandPaymentSettlement(
+      {
+        winner: "south",
+        winType: "tsumo",
+        honba: 1,
+        riichiSticks: 1,
+        playerCount: 4
+      },
+      [
+        { from: "east", to: "south", points: 2000, reason: "hand" },
+        { from: "west", to: "south", points: 1000, reason: "hand" },
+        { from: "north", to: "south", points: 1000, reason: "hand" }
+      ],
+      createDefaultPlayerPoints()
+    );
+
+    expect(result.pointDelta).toEqual({
+      east: -2100,
+      south: 5300,
+      west: -1100,
+      north: -1100
+    });
   });
 
   it("计算四家点差", () => {
@@ -192,6 +283,30 @@ describe("本局结算", () => {
     });
   });
 
+  it("三麻荒牌流局只在三名玩家之间分配罚符", () => {
+    const oneTenpai = applyDrawSettlement(
+      { ...drawRound, playerCount: 3, tenpaiSeats: ["south"] },
+      createDefaultPlayerPoints()
+    );
+    const allTenpai = applyDrawSettlement(
+      { ...drawRound, playerCount: 3, tenpaiSeats: ["east", "south", "west"] },
+      createDefaultPlayerPoints()
+    );
+
+    expect(oneTenpai.pointDelta).toEqual({
+      east: -1500,
+      south: 3000,
+      west: -1500,
+      north: 0
+    });
+    expect(allTenpai.pointDelta).toEqual({
+      east: 0,
+      south: 0,
+      west: 0,
+      north: 0
+    });
+  });
+
   it("荒牌流局 2 家听牌时听牌者各收 1500 点", () => {
     const result = applyDrawSettlement(
       { ...drawRound, tenpaiSeats: ["east", "south"] },
@@ -250,4 +365,106 @@ describe("本局结算", () => {
     expect(drawRecord.drawInput?.riichiSticks).toBe(2);
     expect(replaceRecentSettlement([], drawRecord)).toEqual([drawRecord]);
   });
+
+  it("多人荣和按放铳者之后摸牌顺序决定上家取り优先者", () => {
+    expect(findMultipleRonPriorityWinner("east", ["west", "north"])).toBe("north");
+    expect(findMultipleRonPriorityWinner("east", ["south", "north"])).toBe("north");
+    expect(findMultipleRonPriorityWinner("south", ["east", "north"])).toBe("east");
+    expect(findMultipleRonPriorityWinner("west", ["east", "north"])).toBe("east");
+    expect(findMultipleRonPriorityWinner("north", ["south", "east"])).toBe("south");
+  });
+
+  it("双响时放铳者分别支付荣和点数，供托和本场上家取り", () => {
+    const result = applyMultipleRonSettlement(
+      { ...multipleRonRound, honba: 2, riichiSticks: 1 },
+      [createWinRecord("south", 1000), createWinRecord("west", 2000)],
+      createDefaultPlayerPoints()
+    );
+
+    expect(result.priorityWinner).toBe("west");
+    expect(result.pointDelta).toEqual({
+      east: -3600,
+      south: 1000,
+      west: 3600,
+      north: 0
+    });
+    expect(result.pointsAfter.east).toBe(21400);
+    expect(result.pointsAfter.south).toBe(26000);
+    expect(result.pointsAfter.west).toBe(28600);
+  });
+
+  it("三响时聚合三名和牌者支付", () => {
+    const result = applyMultipleRonSettlement(
+      { ...multipleRonRound, winners: ["south", "west", "north"] },
+      [
+        createWinRecord("south", 1000),
+        createWinRecord("west", 2000),
+        createWinRecord("north", 3900)
+      ],
+      createDefaultPlayerPoints()
+    );
+
+    expect(result.pointDelta).toEqual({
+      east: -6900,
+      south: 1000,
+      west: 2000,
+      north: 3900
+    });
+  });
+
+  it("多人荣和中包含亲家时连庄，不包含亲家时轮庄", () => {
+    const dealerWin = applyMultipleRonSettlement(
+      { ...multipleRonRound, discarder: "south", winners: ["east", "west"] },
+      [createWinRecord("east", 5800), createWinRecord("west", 2000)],
+      createDefaultPlayerPoints()
+    );
+    const dealerNotWin = applyMultipleRonSettlement(
+      { ...multipleRonRound, winners: ["south", "west"] },
+      [createWinRecord("south", 1000), createWinRecord("west", 2000)],
+      createDefaultPlayerPoints()
+    );
+
+    expect(dealerWin.dealerContinues).toBe(true);
+    expect(dealerNotWin.dealerContinues).toBe(false);
+  });
+
+  it("生成多人荣和结算记录并保存每名和牌者结果", () => {
+    const record = createMultipleRonSettlementRecord(
+      { ...multipleRonRound, honba: 1, riichiSticks: 1 },
+      [createWinRecord("south", 1000), createWinRecord("west", 2000)],
+      createDefaultPlayerPoints(),
+      "multi-ron-1"
+    );
+
+    expect(record.event).toEqual({
+      type: "ron",
+      winner: "west",
+      winners: ["south", "west"],
+      discarder: "east"
+    });
+    expect(record.multipleRonWins?.map((win) => win.winner)).toEqual(["south", "west"]);
+    expect(record.result.childResults?.length).toBe(2);
+    expect(record.pointsAfter.west).toBe(28300);
+    expect(replaceRecentSettlement([], record)).toEqual([record]);
+  });
 });
+
+function createWinRecord(winner: RoundInput["winner"], points: number) {
+  const roundInput: RoundInput = {
+    ...round,
+    winner,
+    discarder: "east",
+    winType: "ron"
+  };
+  const result: ScoringResult = {
+    ...scoring,
+    payments: [{ from: "east", to: winner, points, reason: "hand" }]
+  };
+
+  return {
+    winner,
+    roundInput,
+    handInput: hand,
+    result
+  };
+}

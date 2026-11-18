@@ -1,5 +1,5 @@
 {
-  "appid": "wx0180b8adf547c76e",
+  "appid": "wx7b6347c9a4130e11",
   "projectname": "役满之旅",
   "compileType": "miniprogram",
   "miniprogramRoot": "miniprogram/",
@@ -8,11 +8,11 @@
     "es6": true,
     "enhance": true,
     "postcss": true,
-    "minified": false,
+    "minified": true,
     "packNpmManually": true,
     "compileWorklet": false,
     "uglifyFileName": false,
-    "uploadWithSourceMap": true,
+    "uploadWithSourceMap": false,
     "packNpmRelationList": [
       {
         "packageJsonPath": "./package.json",
@@ -34,8 +34,54 @@
   },
   "simulatorPluginLibVersion": {},
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "file",
+        "value": "assets/benji/benji-zhuobu.png"
+      },
+      {
+        "type": "file",
+        "value": "assets/benji/benji-dog.jpg"
+      },
+      {
+        "type": "file",
+        "value": "assets/benji/benji-jiesuan.jpg"
+      },
+      {
+        "type": "file",
+        "value": "assets/benji/benji-player1.jpg"
+      },
+      {
+        "type": "file",
+        "value": "assets/benji/benji-player2.jpg"
+      },
+      {
+        "type": "file",
+        "value": "assets/benji/benji-player3.jpg"
+      },
+      {
+        "type": "file",
+        "value": "assets/benji/benji-player4.jpg"
+      },
+      {
+        "type": "file",
+        "value": "assets/benji/benji-tu.jpg"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram_npm/riichi/index.js.map"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram_npm/syanten/index.js.map"
+      },
+      {
+        "type": "file",
+        "value": "miniprogram_npm/agari/index.js.map"
+      }
+    ],
     "include": []
   },
-  "editorSetting": {}
+  "editorSetting": {},
+  "libVersion": "3.15.2"
 }

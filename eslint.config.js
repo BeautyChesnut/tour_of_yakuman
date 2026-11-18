@@ -8,6 +8,7 @@ module.exports = tseslint.config(
       "dist/**",
       "coverage/**",
       ".tmp/**",
+      "miniprogram/shared/vendor/riichi-bundle.js",
       "miniprogram/miniprogram_npm/**"
     ]
   },
@@ -56,7 +57,7 @@ module.exports = tseslint.config(
     }
   },
   {
-    files: ["scripts/**/*.cjs", "*.config.js"],
+    files: ["scripts/**/*.cjs", "cloudrun/**/*.cjs", "*.config.js"],
     languageOptions: {
       globals: {
         require: "readonly",

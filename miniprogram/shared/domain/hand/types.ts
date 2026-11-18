@@ -1,4 +1,5 @@
 import type { Tile } from "../tiles/index";
+import type { Seat } from "../round/index";
 
 export type MeldType = "chi" | "pon" | "minkan" | "ankan" | "kakan";
 
@@ -30,6 +31,8 @@ export interface HandInput {
   doraIndicators: Tile[];
   kanDoraIndicators: Tile[];
   uraDoraIndicators: Tile[];
+  nukiDoraCount?: number;
+  liabilitySeat?: Seat;
   conditions: WinConditions;
 }
 

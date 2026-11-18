@@ -1,8 +1,9 @@
-import Riichi from "riichi";
+import Riichi from "../../vendor/riichi";
+import type RiichiPackage from "riichi";
 import { validateHandInput } from "../hand/index";
 import type { HandInput, Meld } from "../hand/index";
 import type { RoundInput, Seat } from "../round/index";
-import { SEATS } from "../round/index";
+import { SEATS, TURN_ORDER, getActiveSeats } from "../round/index";
 import type { LimitHand, NamedHan, Payment, ScoringResult } from "../scoring/index";
 import { compareTiles, getDoraFromIndicator, normalizeRedTile } from "../tiles/index";
 import type { BaseTile, NumberSuit, Tile } from "../tiles/index";
@@ -97,16 +98,21 @@ const YAKU_NAME_ZH: Record<string, string> = {
   役牌発: "役牌 发",
   役牌中: "役牌 中",
   ドラ: "宝牌",
-  赤ドラ: "赤宝牌"
+  赤ドラ: "赤宝牌",
+  抜きドラ: "拔北"
 };
 
-type MutableRiichiResult = Omit<Riichi.Result, "oya" | "ko"> & {
+type RiichiInstance = InstanceType<typeof RiichiPackage>;
+type RiichiResult = RiichiPackage.Result;
+
+type MutableRiichiResult = Omit<RiichiResult, "oya" | "ko"> & {
   oya: number[];
   ko: number[];
 };
 
-type EvalFreeRiichi = Riichi & {
+type EvalFreeRiichi = RiichiInstance & {
   tmpResult: MutableRiichiResult;
+  agari: string;
   isTsumo: boolean;
   isOya: boolean;
   bakaze: number;
@@ -125,7 +131,12 @@ export function calculateWithRiichi(
     return createInvalidResult(validation.errors);
   }
 
+  if (!handInput.winningTile) {
+    return createInvalidResult(["需要选择和牌张"]);
+  }
+
   const riichi = new Riichi(toRiichiInput(handInput, roundInput));
+  setKnownWinningTile(riichi, handInput.winningTile);
   applyRules(riichi, rules);
   applyEvalFreeCalcTen(riichi);
   riichi.disableHairi();
@@ -144,7 +155,8 @@ export function calculateWithRiichi(
     return createInvalidResult(["没有役"]);
   }
 
-  const { yaku, dora } = splitYakuAndDora(result.yaku);
+  const adjustedResult = applyNukiDora(result, handInput.nukiDoraCount, roundInput);
+  const { yaku, dora } = splitYakuAndDora(adjustedResult.yaku);
   const zeroDelta = SEATS.reduce<Record<Seat, number>>(
     (acc, seat) => ({
       ...acc,
@@ -159,12 +171,12 @@ export function calculateWithRiichi(
     warnings: getRuleWarnings(rules),
     yaku,
     dora,
-    han: result.han,
-    fu: result.fu || undefined,
-    fuDetails: result.fu ? [{ name: "总符数（riichi）", fu: result.fu }] : [],
-    limit: mapLimit(result.name),
-    basePoints: calculateBasePoints(result),
-    payments: createHandPayments(result, roundInput),
+    han: adjustedResult.han,
+    fu: adjustedResult.fu || undefined,
+    fuDetails: adjustedResult.fu ? [{ name: "总符数（riichi）", fu: adjustedResult.fu }] : [],
+    limit: mapLimit(adjustedResult.name),
+    basePoints: calculateBasePoints(adjustedResult),
+    payments: createLiabilityAdjustedHandPayments(adjustedResult, roundInput, handInput),
     pointDelta: zeroDelta
   };
 }
@@ -189,9 +201,11 @@ export function toRiichiInput(handInput: HandInput, roundInput: RoundInput): str
   }
 
   const doraTiles = [
-    ...handInput.doraIndicators.map(getDoraFromIndicator),
-    ...handInput.kanDoraIndicators.map(getDoraFromIndicator),
-    ...(shouldUseUraDora(handInput) ? handInput.uraDoraIndicators.map(getDoraFromIndicator) : [])
+    ...handInput.doraIndicators.map((tile) => getDoraFromIndicatorForRound(tile, roundInput)),
+    ...handInput.kanDoraIndicators.map((tile) => getDoraFromIndicatorForRound(tile, roundInput)),
+    ...(shouldUseUraDora(handInput)
+      ? handInput.uraDoraIndicators.map((tile) => getDoraFromIndicatorForRound(tile, roundInput))
+      : [])
   ];
 
   if (doraTiles.length > 0) {
@@ -203,7 +217,7 @@ export function toRiichiInput(handInput: HandInput, roundInput: RoundInput): str
   return parts.join("+");
 }
 
-function applyRules(riichi: Riichi, rules: RiichiAdapterRuleOptions): void {
+function applyRules(riichi: RiichiInstance, rules: RiichiAdapterRuleOptions): void {
   if (!rules.kuitan) {
     riichi.disableKuitan();
   }
@@ -217,7 +231,11 @@ function applyRules(riichi: Riichi, rules: RiichiAdapterRuleOptions): void {
   }
 }
 
-function applyEvalFreeCalcTen(riichi: Riichi): void {
+function setKnownWinningTile(riichi: RiichiInstance, winningTile: Tile): void {
+  (riichi as EvalFreeRiichi).agari = tileToRiichi(normalizeRedTile(winningTile));
+}
+
+function applyEvalFreeCalcTen(riichi: RiichiInstance): void {
   const target = riichi as EvalFreeRiichi;
 
   target.calcTen = function calcTenWithoutEval(this: EvalFreeRiichi) {
@@ -318,6 +336,18 @@ function shouldUseUraDora(handInput: HandInput): boolean {
   );
 }
 
+function getDoraFromIndicatorForRound(indicator: Tile, roundInput: RoundInput): Tile {
+  if (roundInput.playerCount === 3 && indicator === "1m") {
+    return "9m";
+  }
+
+  if (roundInput.playerCount === 3 && indicator === "9m") {
+    return "1m";
+  }
+
+  return getDoraFromIndicator(indicator);
+}
+
 function conditionsToRiichiExtra(handInput: HandInput, roundInput: RoundInput): string {
   const conditions = handInput.conditions;
   const flags: string[] = [];
@@ -356,9 +386,13 @@ function roundToRiichiWind(roundInput: RoundInput): string {
 }
 
 function winnerSeatWindToRiichi(roundInput: RoundInput): string {
-  const dealerIndex = SEATS.indexOf(roundInput.dealer);
-  const winnerIndex = SEATS.indexOf(roundInput.winner);
-  const relativeIndex = (winnerIndex - dealerIndex + SEATS.length) % SEATS.length;
+  if (roundInput.playerCount === 3) {
+    return SEAT_TO_RIICHI_WIND[roundInput.winner];
+  }
+
+  const dealerIndex = TURN_ORDER.indexOf(roundInput.dealer);
+  const winnerIndex = TURN_ORDER.indexOf(roundInput.winner);
+  const relativeIndex = (winnerIndex - dealerIndex + TURN_ORDER.length) % TURN_ORDER.length;
   const relativeSeat = SEATS[relativeIndex];
 
   return SEAT_TO_RIICHI_WIND[relativeSeat];
@@ -501,7 +535,7 @@ function mapLimit(name: string): LimitHand | undefined {
   return mapping[name];
 }
 
-function calculateBasePoints(result: Riichi.Result): number {
+function calculateBasePoints(result: RiichiResult): number {
   if (result.yakuman > 0) {
     return 8000 * result.yakuman;
   }
@@ -531,7 +565,95 @@ function calculateBasePoints(result: Riichi.Result): number {
   return result.fu * 2 ** (result.han + 2);
 }
 
-function createHandPayments(result: Riichi.Result, roundInput: RoundInput): Payment[] {
+function applyNukiDora(
+  result: RiichiResult,
+  nukiDoraCount: number | undefined,
+  roundInput: RoundInput
+): RiichiResult {
+  const count = normalizeNukiDoraCount(nukiDoraCount);
+
+  if (roundInput.playerCount !== 3 || count === 0 || result.yakuman > 0) {
+    return result;
+  }
+
+  const adjustedHan = result.han + count;
+  const base = calculateLimitedBasePoints(result.fu, adjustedHan);
+  const isTsumo = result.oya.length > 1 || result.ko.length > 1;
+  const name = createLimitName(base, adjustedHan);
+
+  return {
+    ...result,
+    yaku: {
+      ...result.yaku,
+      抜きドラ: `${count}飜`
+    },
+    han: adjustedHan,
+    name,
+    ten: roundInput.winner === roundInput.dealer ? ceil100(base * 6) : ceil100(base * 4),
+    oya: isTsumo
+      ? [ceil100(base * 2), ceil100(base * 2), ceil100(base * 2)]
+      : [ceil100(base * 6), 0, 0],
+    ko: isTsumo ? [ceil100(base * 2), ceil100(base), ceil100(base)] : [ceil100(base * 4), 0, 0]
+  };
+}
+
+function normalizeNukiDoraCount(count: number | undefined): number {
+  return Math.min(Math.max(Math.trunc(count ?? 0), 0), 4);
+}
+
+function calculateLimitedBasePoints(fu: number, han: number): number {
+  const base = fu * 2 ** (han + 2);
+
+  if (base <= 2000) {
+    return base;
+  }
+
+  if (han >= 13) {
+    return 8000;
+  }
+
+  if (han >= 11) {
+    return 6000;
+  }
+
+  if (han >= 8) {
+    return 4000;
+  }
+
+  if (han >= 6) {
+    return 3000;
+  }
+
+  return 2000;
+}
+
+function createLimitName(base: number, han: number): string {
+  if (base < 2000) {
+    return "";
+  }
+
+  if (han >= 13) {
+    return "数え役満";
+  }
+
+  if (han >= 11) {
+    return "三倍満";
+  }
+
+  if (han >= 8) {
+    return "倍満";
+  }
+
+  if (han >= 6) {
+    return "跳満";
+  }
+
+  return "満貫";
+}
+
+function createHandPayments(result: RiichiResult, roundInput: RoundInput): Payment[] {
+  const activeSeats = getActiveSeats(roundInput.playerCount);
+
   if (roundInput.winType === "ron") {
     if (!roundInput.discarder) {
       return [];
@@ -550,23 +672,169 @@ function createHandPayments(result: Riichi.Result, roundInput: RoundInput): Paym
   if (roundInput.winner === roundInput.dealer) {
     const allPayment = result.oya[0] ?? 0;
 
-    return SEATS.filter((seat) => seat !== roundInput.winner).map((seat) => ({
-      from: seat,
-      to: roundInput.winner,
-      points: allPayment,
-      reason: "hand"
-    }));
+    return activeSeats
+      .filter((seat) => seat !== roundInput.winner)
+      .map((seat) => ({
+        from: seat,
+        to: roundInput.winner,
+        points: allPayment,
+        reason: "hand"
+      }));
   }
 
   const dealerPayment = result.ko[0] ?? 0;
   const childPayment = result.ko[1] ?? 0;
 
-  return SEATS.filter((seat) => seat !== roundInput.winner).map((seat) => ({
-    from: seat,
-    to: roundInput.winner,
-    points: seat === roundInput.dealer ? dealerPayment : childPayment,
-    reason: "hand"
-  }));
+  return activeSeats
+    .filter((seat) => seat !== roundInput.winner)
+    .map((seat) => ({
+      from: seat,
+      to: roundInput.winner,
+      points: seat === roundInput.dealer ? dealerPayment : childPayment,
+      reason: "hand"
+    }));
+}
+
+function createLiabilityAdjustedHandPayments(
+  result: RiichiResult,
+  roundInput: RoundInput,
+  handInput: HandInput
+): Payment[] {
+  const payments = createHandPayments(result, roundInput);
+  const liabilitySeat = handInput.liabilitySeat;
+  const liabilityYakuman = countLiabilityYakuman(result);
+
+  if (
+    !liabilitySeat ||
+    liabilitySeat === roundInput.winner ||
+    result.yakuman <= 0 ||
+    liabilityYakuman <= 0
+  ) {
+    return payments;
+  }
+
+  const normalYakuman = Math.max(0, result.yakuman - liabilityYakuman);
+  const normalPayments = normalYakuman > 0 ? createYakumanPayments(normalYakuman, roundInput) : [];
+  const liabilityBasePayments = createYakumanPayments(liabilityYakuman, roundInput);
+  let liabilityPayments: Payment[];
+
+  if (roundInput.winType === "tsumo") {
+    const total = liabilityBasePayments.reduce((sum, payment) => sum + payment.points, 0);
+    liabilityPayments = [
+      {
+        from: liabilitySeat,
+        to: roundInput.winner,
+        points: total,
+        reason: "hand"
+      }
+    ];
+
+    return aggregatePayments([...normalPayments, ...liabilityPayments]);
+  }
+
+  if (!roundInput.discarder || liabilitySeat === roundInput.discarder) {
+    return aggregatePayments([...normalPayments, ...liabilityBasePayments]);
+  }
+
+  const ronPayment = liabilityBasePayments.find((payment) => payment.reason === "hand");
+
+  if (!ronPayment) {
+    return aggregatePayments([...normalPayments, ...liabilityBasePayments]);
+  }
+
+  const splitPayment = ceil100(ronPayment.points / 2);
+
+  liabilityPayments = [
+    {
+      from: roundInput.discarder,
+      to: roundInput.winner,
+      points: splitPayment,
+      reason: "hand"
+    },
+    {
+      from: liabilitySeat,
+      to: roundInput.winner,
+      points: splitPayment,
+      reason: "hand"
+    }
+  ];
+
+  return aggregatePayments([...normalPayments, ...liabilityPayments]);
+}
+
+function countLiabilityYakuman(result: RiichiResult): number {
+  return Object.entries(result.yaku)
+    .filter(([name]) =>
+      ["大三元", "大四喜", "四槓子"].some((yakumanName) => name.includes(yakumanName))
+    )
+    .reduce((total, [, value]) => total + parseYakumanCount(value), 0);
+}
+
+function parseYakumanCount(value: string): number {
+  const match = value.match(/\d+/);
+
+  return match ? Number(match[0]) : 1;
+}
+
+function createYakumanPayments(yakumanCount: number, roundInput: RoundInput): Payment[] {
+  const activeSeats = getActiveSeats(roundInput.playerCount);
+  const base = 8000 * yakumanCount;
+
+  if (roundInput.winType === "ron") {
+    if (!roundInput.discarder) {
+      return [];
+    }
+
+    return [
+      {
+        from: roundInput.discarder,
+        to: roundInput.winner,
+        points: roundInput.winner === roundInput.dealer ? ceil100(base * 6) : ceil100(base * 4),
+        reason: "hand"
+      }
+    ];
+  }
+
+  if (roundInput.winner === roundInput.dealer) {
+    const allPayment = ceil100(base * 2);
+
+    return activeSeats
+      .filter((seat) => seat !== roundInput.winner)
+      .map((seat) => ({
+        from: seat,
+        to: roundInput.winner,
+        points: allPayment,
+        reason: "hand" as const
+      }));
+  }
+
+  const dealerPayment = ceil100(base * 2);
+  const childPayment = ceil100(base);
+
+  return activeSeats
+    .filter((seat) => seat !== roundInput.winner)
+    .map((seat) => ({
+      from: seat,
+      to: roundInput.winner,
+      points: seat === roundInput.dealer ? dealerPayment : childPayment,
+      reason: "hand" as const
+    }));
+}
+
+function aggregatePayments(payments: readonly Payment[]): Payment[] {
+  const grouped = new Map<string, Payment>();
+
+  for (const payment of payments) {
+    const key = `${payment.from}:${payment.to}:${payment.reason}`;
+    const existing = grouped.get(key);
+
+    grouped.set(key, {
+      ...payment,
+      points: (existing?.points ?? 0) + payment.points
+    });
+  }
+
+  return [...grouped.values()];
 }
 
 function createInvalidResult(errors: string[]): ScoringResult {

@@ -34,6 +34,13 @@
 
 - `table/table-felt.svg`：桌面纹理参考。
 
+## maple
+
+- `maple/maple-table.jpg`：枫夜和纸布局的深玉色桌布、木框与枫叶装饰。
+- `maple/maple-players.jpg`：枫夜和纸布局的四角色 2 × 2 素材图，由页面按方位裁切显示。
+- `maple/maple-button-leaves.png`：枫夜和纸布局结算按钮右侧的透明枫叶装饰。
+- 两张素材均由 gpt-image 生成并针对小程序包体压缩；只用于第三套本地算点视觉布局，不参与算点数据和在线用户头像。
+
 ## result
 
 - `result/result-win.svg`：和牌结果辅助素材。

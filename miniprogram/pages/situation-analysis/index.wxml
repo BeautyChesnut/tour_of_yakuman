@@ -1,0 +1,250 @@
+<view class="analysis-page analysis-theme-{{themeId}}">
+  <view wx:if="{{!available}}" class="empty-state">
+    <text class="empty-title">暂无可用分析</text>
+    <text class="empty-copy">{{emptyText}}</text>
+    <button class="back-button" bindtap="handleBack">返回算点桌面</button>
+  </view>
+
+  <block wx:else>
+    <view class="analysis-overview">
+      <view>
+        <text class="overview-label">局势分析</text>
+        <text class="overview-rank">{{currentRankText}}</text>
+      </view>
+      <text class="overview-meta">{{metaText}}</text>
+    </view>
+
+    <view class="freshness-bar {{freshnessClass}}">
+      <text class="freshness-text">{{freshnessText}}</text>
+      <button
+        wx:if="{{canRefresh}}"
+        class="freshness-button"
+        loading="{{refreshing}}"
+        disabled="{{refreshing}}"
+        bindtap="handleRefresh"
+      >刷新</button>
+    </view>
+
+    <view class="perspective-control">
+      <text class="perspective-label">分析视角</text>
+      <view class="perspective-options {{perspectiveLayoutClass}}">
+        <view
+          wx:for="{{perspectiveOptions}}"
+          wx:key="seat"
+          class="perspective-option {{item.selected ? 'perspective-option-active' : ''}}"
+          data-seat="{{item.seat}}"
+          bindtap="handlePerspectiveChange"
+        >{{item.label}}</view>
+      </view>
+    </view>
+
+    <view wx:if="{{roundContext}}" class="strategy-context">
+      <view class="strategy-context-heading">
+        <text class="strategy-context-title">{{roundContext.stageLabel}}</text>
+        <text class="strategy-context-badge">局况</text>
+      </view>
+      <text class="strategy-context-line">{{roundContext.stageDetail}}</text>
+      <text class="strategy-context-line">{{roundContext.dealerText}}</text>
+      <text class="strategy-context-rule">{{roundContext.tieBreakText}}</text>
+    </view>
+
+    <view class="target-tabs {{tabLayoutClass}}">
+      <view
+        wx:for="{{tabs}}"
+        wx:key="key"
+        class="target-tab {{activeTabIndex === index ? 'target-tab-active' : ''}}"
+        data-index="{{index}}"
+        bindtap="handleTabChange"
+      >
+        {{item.label}}
+      </view>
+    </view>
+
+    <view wx:if="{{activeTarget}}" class="target-content">
+      <view class="target-status {{activeTarget.achieved ? 'target-status-achieved' : ''}}">
+        <text class="target-status-title">{{activeTarget.statusText}}</text>
+        <text class="target-status-copy">{{activeTarget.pressureText}}</text>
+      </view>
+
+      <view wx:if="{{!activeTarget.achieved}}" class="analysis-section">
+        <text class="section-title">荣和条件</text>
+        <view
+          wx:for="{{activeTarget.ronScenarios}}"
+          wx:key="id"
+          class="scenario-entry"
+          data-scenario-id="{{item.id}}"
+          bindtap="handleScenarioOpen"
+        >
+          <view class="scenario-copy">
+            <text class="scenario-title">{{item.title}}</text>
+            <text class="scenario-description">{{item.description}}</text>
+          </view>
+          <text class="scenario-chevron">›</text>
+        </view>
+        <text wx:if="{{!activeTarget.ronScenarios.length}}" class="detail-muted">
+          现有合法打点范围内暂无可达成条件
+        </text>
+      </view>
+
+      <view wx:if="{{!activeTarget.achieved}}" class="analysis-section">
+        <text class="section-title">自摸条件</text>
+        <view
+          wx:if="{{activeTarget.tsumoScenario}}"
+          class="scenario-entry"
+          data-scenario-id="{{activeTarget.tsumoScenario.id}}"
+          bindtap="handleScenarioOpen"
+        >
+          <view class="scenario-copy">
+            <text class="scenario-title">{{activeTarget.tsumoScenario.title}}</text>
+            <text class="scenario-description">{{activeTarget.tsumoScenario.description}}</text>
+          </view>
+          <text class="scenario-chevron">›</text>
+        </view>
+        <text wx:else class="detail-muted">现有合法打点范围内暂无可达成条件</text>
+      </view>
+
+      <view class="analysis-section">
+        <text class="section-title">策略提示</text>
+        <text
+          wx:for="{{activeTarget.strategyLines}}"
+          wx:key="*this"
+          class="detail-line"
+        >{{item}}</text>
+      </view>
+    </view>
+
+    <view wx:elif="{{avoidLast}}" class="target-content">
+      <view class="target-status {{avoidLast.currentlyLast ? 'target-status-warning' : ''}}">
+        <text class="target-status-title">{{avoidLast.statusText}}</text>
+        <text class="target-status-copy">{{avoidLast.pressureText}}</text>
+      </view>
+
+      <view wx:if="{{avoidLast.riskScenarios.length}}" class="analysis-section">
+        <text class="section-title">放铳风险线</text>
+        <view
+          wx:for="{{avoidLast.riskScenarios}}"
+          wx:key="id"
+          class="scenario-entry scenario-entry-risk"
+          data-scenario-id="{{item.id}}"
+          bindtap="handleScenarioOpen"
+        >
+          <view class="scenario-copy">
+            <text class="scenario-title">{{item.title}}</text>
+            <text class="scenario-description">{{item.description}}</text>
+          </view>
+          <text class="scenario-chevron">›</text>
+        </view>
+      </view>
+
+      <view class="analysis-section">
+        <text class="section-title">策略提示</text>
+        <text
+          wx:for="{{avoidLast.strategyLines}}"
+          wx:key="*this"
+          class="detail-line"
+        >{{item}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{riichiCost}}" class="decision-section">
+      <view class="decision-heading">
+        <view class="decision-heading-copy">
+          <text class="section-title">立直成本推演</text>
+          <text class="decision-subtitle">仅模拟宣言时支付 1,000 点后的即时顺位</text>
+        </view>
+        <view
+          class="decision-status {{riichiCost.available ? 'decision-status-available' : 'decision-status-unavailable'}}"
+        >
+          {{riichiCost.available ? '可支付' : '不可支付'}}
+        </view>
+      </view>
+      <text class="decision-result-title">{{riichiCost.title}}</text>
+      <text class="decision-copy">{{riichiCost.detail}}</text>
+      <view wx:if="{{riichiCost.resultRows.length}}" class="scenario-result-table compact-result-table">
+        <view
+          wx:for="{{riichiCost.resultRows}}"
+          wx:key="seat"
+          class="scenario-result-row {{item.isCurrentPlayer ? 'scenario-result-row-current' : ''}}"
+        >
+          <text class="result-rank">{{item.rankText}}</text>
+          <text class="result-name">{{item.name}}</text>
+          <text class="result-points">{{item.pointsText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{drawAnalysis}}" class="decision-section draw-section">
+      <text class="section-title">荒牌流局推演</text>
+      <text class="decision-subtitle">选择假设听牌的玩家，结果不会修改当前牌局</text>
+      <view class="tenpai-options">
+        <view
+          wx:for="{{drawTenpaiOptions}}"
+          wx:key="seat"
+          class="tenpai-option {{item.selected ? 'tenpai-option-active' : ''}}"
+          data-seat="{{item.seat}}"
+          bindtap="handleDrawTenpaiToggle"
+        >
+          <text class="tenpai-option-name">{{item.label}}</text>
+          <text class="tenpai-option-state">{{item.selected ? '听牌' : '未听'}}</text>
+        </view>
+      </view>
+      <text class="decision-result-title">{{drawAnalysis.title}}</text>
+      <text class="decision-copy">{{drawAnalysis.detail}}</text>
+      <text class="decision-copy">{{drawAnalysis.continuationText}}</text>
+      <view class="scenario-result-table compact-result-table">
+        <view
+          wx:for="{{drawAnalysis.resultRows}}"
+          wx:key="seat"
+          class="scenario-result-row {{item.isCurrentPlayer ? 'scenario-result-row-current' : ''}}"
+        >
+          <text class="result-rank">{{item.rankText}}</text>
+          <text class="result-name">{{item.name}}</text>
+          <text class="result-points">{{item.pointsText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{activeScenario}}" class="scenario-result">
+      <view class="scenario-result-header">
+        <view>
+          <text class="section-title">情景推演结果</text>
+          <text class="scenario-result-name">{{activeScenario.title}}</text>
+        </view>
+        <view class="scenario-close" bindtap="handleScenarioClose">×</view>
+      </view>
+      <text class="scenario-result-rank">{{activeScenario.resultRankText}}</text>
+      <view class="scenario-result-table">
+        <view
+          wx:for="{{activeScenario.resultRows}}"
+          wx:key="seat"
+          class="scenario-result-row {{item.isCurrentPlayer ? 'scenario-result-row-current' : ''}}"
+        >
+          <text class="result-rank">{{item.rankText}}</text>
+          <text class="result-name">{{item.name}}{{item.isCurrentPlayer ? '（当前视角）' : ''}}</text>
+          <text class="result-points">{{item.pointsText}}</text>
+        </view>
+      </view>
+      <view wx:if="{{activeScenario.scoreRecommendations.length}}" class="score-recommendations">
+        <text class="section-title">符番达成建议</text>
+        <view
+          wx:for="{{activeScenario.scoreRecommendations}}"
+          wx:key="id"
+          class="score-recommendation"
+        >
+          <view class="recommendation-main">
+            <text class="recommendation-tone {{item.toneClass}}">{{item.toneText}}</text>
+            <text class="recommendation-label">{{item.label}}</text>
+          </view>
+          <view class="recommendation-score-wrap">
+            <text class="recommendation-score">{{item.scoreText}}</text>
+            <text wx:if="{{item.paymentText}}" class="recommendation-payment">
+              {{item.paymentText}}
+            </text>
+          </view>
+        </view>
+        <text class="recommendation-note">仅表示合法点数门槛，未判断当前手牌实际拥有的役。</text>
+      </view>
+      <text class="scenario-result-note">已计入本场与供托；同点按页面所示座位顺序排序；仅为点数推演，不会修改当前牌局。</text>
+    </view>
+  </block>
+</view>

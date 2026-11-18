@@ -1,6 +1,9 @@
 export type {
   DrawRoundInput,
+  GameVariant,
+  MultipleRonRoundInput,
   PlayerPoints,
+  PlayerCount,
   RoundContext,
   RoundEvent,
   RoundInput,
@@ -8,4 +11,11 @@ export type {
   Seat,
   WinType
 } from "./types";
-export { DEFAULT_INITIAL_POINTS, SEATS } from "./types";
+export {
+  DEFAULT_INITIAL_POINTS,
+  SANMA_SEATS,
+  SEATS,
+  TURN_ORDER,
+  getActiveSeats,
+  getActiveTurnOrder
+} from "./types";

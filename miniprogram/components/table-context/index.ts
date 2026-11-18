@@ -86,7 +86,7 @@ function createSeatViews(
   return (["north", "west", "east", "south"] as Seat[]).map((seat) => {
     const roles = [
       seat === dealer ? "亲" : "",
-      seat === winner ? "和" : "",
+      seat === winner ? (winType === "tsumo" ? "摸" : "和") : "",
       winType === "ron" && seat === discarder ? "铳" : ""
     ].filter(Boolean);
 

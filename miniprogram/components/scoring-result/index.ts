@@ -8,6 +8,10 @@ Component({
       type: String,
       value: "算点结果"
     },
+    themeId: {
+      type: String,
+      value: "classic"
+    },
     han: {
       type: Number,
       value: 0

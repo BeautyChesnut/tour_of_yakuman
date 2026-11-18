@@ -23,6 +23,10 @@ export interface ScoringResult {
   valid: boolean;
   errors: string[];
   warnings: string[];
+  childResults?: Array<{
+    winner: Seat;
+    result: ScoringResult;
+  }>;
   yaku: NamedHan[];
   dora: NamedHan[];
   han: number;

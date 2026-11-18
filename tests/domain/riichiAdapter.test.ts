@@ -56,7 +56,7 @@ describe("riichi adapter", () => {
       conditions: baseConditions
     };
 
-    expect(toRiichiInput(hand, baseRound)).toBe("112233456789m11s+12");
+    expect(toRiichiInput(hand, baseRound)).toBe("112233456789m11s+14");
   });
 
   it("荣和时把和牌张放入 +agari 部分", () => {
@@ -85,7 +85,7 @@ describe("riichi adapter", () => {
     };
 
     expect(toRiichiInput(hand, { ...baseRound, winType: "ron", discarder: "east" })).toBe(
-      "112233456789m1s+1s+12"
+      "112233456789m1s+1s+14"
     );
   });
 
@@ -118,8 +118,66 @@ describe("riichi adapter", () => {
       "112233456789m11s+11"
     );
     expect(toRiichiInput(hand, { ...baseRound, dealer: "west", winner: "north" })).toBe(
+      "112233456789m11s+14"
+    );
+  });
+
+  it("三麻按玩家实际座位传入自风", () => {
+    const hand: HandInput = {
+      concealedTiles: [
+        "1m",
+        "1m",
+        "2m",
+        "2m",
+        "3m",
+        "3m",
+        "4m",
+        "5m",
+        "6m",
+        "7m",
+        "8m",
+        "9m",
+        "1s"
+      ],
+      winningTile: "1s",
+      melds: [],
+      doraIndicators: [],
+      kanDoraIndicators: [],
+      uraDoraIndicators: [],
+      conditions: baseConditions
+    };
+
+    expect(toRiichiInput(hand, { ...baseRound, playerCount: 3, winner: "south" })).toBe(
       "112233456789m11s+12"
     );
+  });
+
+  it("三麻万子宝牌指示牌只在一万和九万之间循环", () => {
+    const hand: HandInput = {
+      concealedTiles: [
+        "1m",
+        "1m",
+        "2p",
+        "2p",
+        "3p",
+        "3p",
+        "4p",
+        "5p",
+        "6p",
+        "7p",
+        "8p",
+        "9p",
+        "1s"
+      ],
+      winningTile: "1s",
+      melds: [],
+      doraIndicators: ["1m", "9m"],
+      kanDoraIndicators: [],
+      uraDoraIndicators: [],
+      conditions: baseConditions
+    };
+
+    expect(toRiichiInput(hand, { ...baseRound, playerCount: 3 })).toContain("+d19m+");
   });
 
   it("把宝牌指示牌转换为实际宝牌传给 riichi", () => {
@@ -147,7 +205,7 @@ describe("riichi adapter", () => {
       conditions: { ...baseConditions, riichi: true, ippatsu: true, enableUraDora: true }
     };
 
-    expect(toRiichiInput(hand, baseRound)).toBe("123456789m550p11s+d55p1z+ri12");
+    expect(toRiichiInput(hand, baseRound)).toBe("123456789m550p11s+d55p1z+ri14");
   });
 
   it("计算并转换 riichi 输出为项目 ScoringResult", () => {
@@ -191,6 +249,179 @@ describe("riichi adapter", () => {
     );
   });
 
+  it("三麻自摸只生成两名对手的手牌支付", () => {
+    const hand: HandInput = {
+      concealedTiles: [
+        "1m",
+        "2m",
+        "3m",
+        "4m",
+        "5m",
+        "6m",
+        "7m",
+        "8m",
+        "9m",
+        "1s",
+        "1s",
+        "2s",
+        "3s"
+      ],
+      winningTile: "4s",
+      melds: [],
+      doraIndicators: [],
+      kanDoraIndicators: [],
+      uraDoraIndicators: [],
+      conditions: baseConditions
+    };
+
+    const result = calculateWithRiichi(hand, { ...baseRound, playerCount: 3 });
+
+    expect(result.valid).toBe(true);
+    expect(result.payments.map((payment) => payment.from).sort()).toEqual(["east", "west"]);
+  });
+
+  it("三麻拔北作为宝牌番计入点数", () => {
+    const hand: HandInput = {
+      concealedTiles: [
+        "1m",
+        "1m",
+        "1m",
+        "9m",
+        "9m",
+        "9m",
+        "2p",
+        "3p",
+        "4p",
+        "2s",
+        "3s",
+        "4s",
+        "5p"
+      ],
+      winningTile: "5p",
+      melds: [],
+      doraIndicators: [],
+      kanDoraIndicators: [],
+      uraDoraIndicators: [],
+      nukiDoraCount: 2,
+      conditions: baseConditions
+    };
+
+    const withoutNuki = calculateWithRiichi(
+      { ...hand, nukiDoraCount: 0 },
+      { ...baseRound, playerCount: 3 }
+    );
+    const withNuki = calculateWithRiichi(hand, { ...baseRound, playerCount: 3 });
+
+    expect(withNuki.valid).toBe(true);
+    expect(withoutNuki.valid).toBe(true);
+    expect(withNuki.dora).toEqual(expect.arrayContaining([{ name: "拔北", han: 2 }]));
+    expect(withNuki.han).toBe(withoutNuki.han + 2);
+    expect(withNuki.payments.map((payment) => payment.from).sort()).toEqual(["east", "west"]);
+  });
+
+  it("大三元自摸有责任者时由责任者承担全部手牌支付", () => {
+    const hand: HandInput = {
+      concealedTiles: [
+        "white",
+        "white",
+        "white",
+        "green",
+        "green",
+        "green",
+        "red",
+        "red",
+        "red",
+        "1m",
+        "2m",
+        "3m",
+        "9p"
+      ],
+      winningTile: "9p",
+      melds: [],
+      doraIndicators: [],
+      kanDoraIndicators: [],
+      uraDoraIndicators: [],
+      liabilitySeat: "west",
+      conditions: baseConditions
+    };
+
+    const result = calculateWithRiichi(hand, baseRound);
+
+    expect(result.valid).toBe(true);
+    expect(result.yaku.map((yaku) => yaku.name)).toContain("大三元");
+    expect(result.payments).toEqual([{ from: "west", to: "south", points: 32000, reason: "hand" }]);
+  });
+
+  it("大三元荣和有责任者时由放铳者和责任者共同承担", () => {
+    const hand: HandInput = {
+      concealedTiles: [
+        "white",
+        "white",
+        "white",
+        "green",
+        "green",
+        "green",
+        "red",
+        "red",
+        "red",
+        "1m",
+        "2m",
+        "3m",
+        "9p"
+      ],
+      winningTile: "9p",
+      melds: [],
+      doraIndicators: [],
+      kanDoraIndicators: [],
+      uraDoraIndicators: [],
+      liabilitySeat: "west",
+      conditions: { ...baseConditions, menzenTsumo: false }
+    };
+
+    const result = calculateWithRiichi(hand, {
+      ...baseRound,
+      winType: "ron",
+      discarder: "east"
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.yaku.map((yaku) => yaku.name)).toContain("大三元");
+    expect(result.payments).toEqual([
+      { from: "east", to: "south", points: 16000, reason: "hand" },
+      { from: "west", to: "south", points: 16000, reason: "hand" }
+    ]);
+  });
+
+  it("复合役满只对产生包牌的役满部分应用责任支付", () => {
+    const hand: HandInput = {
+      concealedTiles: ["south"],
+      winningTile: "south",
+      melds: [
+        { type: "pon", open: true, tiles: ["white", "white", "white"] },
+        { type: "pon", open: true, tiles: ["green", "green", "green"] },
+        { type: "pon", open: true, tiles: ["red", "red", "red"] },
+        { type: "pon", open: true, tiles: ["east", "east", "east"] }
+      ],
+      doraIndicators: [],
+      kanDoraIndicators: [],
+      uraDoraIndicators: [],
+      liabilitySeat: "west",
+      conditions: { ...baseConditions, menzenTsumo: false }
+    };
+
+    const result = calculateWithRiichi(hand, baseRound);
+
+    expect(result.valid).toBe(true);
+    expect(result.yaku.map((yaku) => yaku.name)).toEqual(
+      expect.arrayContaining(["大三元", "字一色"])
+    );
+    expect(result.payments).toEqual([
+      { from: "east", to: "south", points: 16000, reason: "hand" },
+      { from: "west", to: "south", points: 40000, reason: "hand" },
+      { from: "north", to: "south", points: 8000, reason: "hand" }
+    ]);
+  });
+
   it("输出中文役种和宝牌名称", () => {
     const hand: HandInput = {
       concealedTiles: [
@@ -225,6 +456,181 @@ describe("riichi adapter", () => {
     expect(result.dora.map((dora) => dora.name)).toEqual(
       expect.arrayContaining(["宝牌", "赤宝牌"])
     );
+  });
+
+  it("平和自摸按 20 符计算，不额外加自摸符", () => {
+    const hand: HandInput = {
+      concealedTiles: [
+        "1m",
+        "2m",
+        "3m",
+        "4m",
+        "5m",
+        "6m",
+        "7p",
+        "8p",
+        "9p",
+        "2s",
+        "3s",
+        "5s",
+        "5s"
+      ],
+      winningTile: "4s",
+      melds: [],
+      doraIndicators: [],
+      kanDoraIndicators: [],
+      uraDoraIndicators: [],
+      conditions: baseConditions
+    };
+
+    const result = calculateWithRiichi(hand, baseRound);
+
+    expect(result.valid).toBe(true);
+    expect(result.fu).toBe(20);
+    expect(result.yaku.map((yaku) => yaku.name)).toEqual(
+      expect.arrayContaining(["平和", "门前清自摸和"])
+    );
+    expect(result.payments).toEqual([
+      { from: "east", to: "south", points: 700, reason: "hand" },
+      { from: "west", to: "south", points: 400, reason: "hand" },
+      { from: "north", to: "south", points: 400, reason: "hand" }
+    ]);
+  });
+
+  it("平和荣和按 30 符计算", () => {
+    const hand: HandInput = {
+      concealedTiles: [
+        "1m",
+        "2m",
+        "3m",
+        "4m",
+        "5m",
+        "6m",
+        "7p",
+        "8p",
+        "9p",
+        "2s",
+        "3s",
+        "5s",
+        "5s"
+      ],
+      winningTile: "4s",
+      melds: [],
+      doraIndicators: [],
+      kanDoraIndicators: [],
+      uraDoraIndicators: [],
+      conditions: { ...baseConditions, menzenTsumo: false }
+    };
+
+    const result = calculateWithRiichi(hand, {
+      ...baseRound,
+      winType: "ron",
+      discarder: "east"
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.fu).toBe(30);
+    expect(result.yaku.map((yaku) => yaku.name)).toContain("平和");
+    expect(result.payments).toEqual([{ from: "east", to: "south", points: 1000, reason: "hand" }]);
+  });
+
+  it("役牌雀头不计平和", () => {
+    const hand: HandInput = {
+      concealedTiles: [
+        "1m",
+        "2m",
+        "3m",
+        "4m",
+        "5m",
+        "6m",
+        "7p",
+        "8p",
+        "9p",
+        "2s",
+        "3s",
+        "east",
+        "east"
+      ],
+      winningTile: "4s",
+      melds: [],
+      doraIndicators: [],
+      kanDoraIndicators: [],
+      uraDoraIndicators: [],
+      conditions: baseConditions
+    };
+
+    const result = calculateWithRiichi(hand, baseRound);
+
+    expect(result.valid).toBe(true);
+    expect(result.fu).toBe(30);
+    expect(result.yaku.map((yaku) => yaku.name)).not.toContain("平和");
+  });
+
+  it("嵌张等待不计平和", () => {
+    const hand: HandInput = {
+      concealedTiles: [
+        "1m",
+        "2m",
+        "3m",
+        "4m",
+        "5m",
+        "6m",
+        "7p",
+        "8p",
+        "9p",
+        "2s",
+        "4s",
+        "5s",
+        "5s"
+      ],
+      winningTile: "3s",
+      melds: [],
+      doraIndicators: [],
+      kanDoraIndicators: [],
+      uraDoraIndicators: [],
+      conditions: baseConditions
+    };
+
+    const result = calculateWithRiichi(hand, baseRound);
+
+    expect(result.valid).toBe(true);
+    expect(result.fu).toBe(30);
+    expect(result.yaku.map((yaku) => yaku.name)).not.toContain("平和");
+  });
+
+  it("自摸张用于组成雀头时不计平和", () => {
+    const hand: HandInput = {
+      concealedTiles: [
+        "4m",
+        "5m",
+        "6m",
+        "7m",
+        "2p",
+        "3p",
+        "4p",
+        "6p",
+        "7p",
+        "8p",
+        "2s",
+        "3s",
+        "4s"
+      ],
+      winningTile: "4m",
+      melds: [],
+      doraIndicators: [],
+      kanDoraIndicators: [],
+      uraDoraIndicators: [],
+      conditions: baseConditions
+    };
+
+    const result = calculateWithRiichi(hand, baseRound);
+
+    expect(result.valid).toBe(true);
+    expect(result.fu).toBe(30);
+    expect(result.yaku.map((yaku) => yaku.name)).toEqual(
+      expect.arrayContaining(["断幺九", "门前清自摸和"])
+    );
+    expect(result.yaku.map((yaku) => yaku.name)).not.toContain("平和");
   });
 
   it("在 eval 不可用的小程序环境中仍可计算点数", () => {

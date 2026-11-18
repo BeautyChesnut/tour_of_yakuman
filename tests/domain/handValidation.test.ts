@@ -67,6 +67,16 @@ describe("手牌输入校验", () => {
     expect(result.errors).toContain("五万数量超过四张");
   });
 
+  it("允许把赤五作为和牌张", () => {
+    const result = validateHandInput({
+      ...baseHand,
+      winningTile: "red5s"
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
   it("校验吃面子必须是同花色连续三张数牌", () => {
     const result = validateHandInput({
       ...baseHand,

@@ -80,6 +80,24 @@
   font-size: 22rpx;
 }
 
+.child-result {
+  margin-top: 12rpx;
+  padding: 12rpx;
+  border: 1rpx solid #dce8dd;
+  border-radius: 8rpx;
+  background: #f7faf6;
+}
+
+.child-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+  color: #126c4f;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
 .score-row {
   display: grid;
   grid-template-columns: 1.25fr 0.78fr 1.1fr 58rpx;
@@ -130,4 +148,90 @@
   margin-top: 10rpx;
   color: #9f6b00;
   font-size: 24rpx;
+}
+
+.result-theme-benji {
+  border-color: #dfd3bd;
+  background: #fffaf0;
+  box-shadow: 0 10rpx 28rpx rgba(83, 69, 45, 0.1);
+}
+
+.result-theme-benji .result-hero,
+.result-theme-benji .score-row {
+  border-color: #e8ddca;
+}
+
+.result-theme-benji .hero-limit,
+.result-theme-benji .child-result-head,
+.result-theme-benji .score-delta.positive {
+  color: #2d7152;
+}
+
+.result-theme-benji .primary-block,
+.result-theme-benji .child-result {
+  border-color: #dfd3bd;
+  background: #fbf6eb;
+}
+
+.result-theme-maple {
+  border-color: #c9a873;
+  border-top: 8rpx solid #8f3028;
+  background: #fff8e9;
+  box-shadow: 0 12rpx 30rpx rgba(74, 51, 31, 0.16);
+}
+
+.result-theme-maple .result-hero,
+.result-theme-maple .score-row {
+  border-color: #dfc99f;
+}
+
+.result-theme-maple .title,
+.result-theme-maple .block-title,
+.result-theme-maple .detail-total,
+.result-theme-maple .line,
+.result-theme-maple .score-row,
+.result-theme-maple .score-after {
+  color: #3b2922;
+}
+
+.result-theme-maple .hero-subtitle,
+.result-theme-maple .secondary-line,
+.result-theme-maple .score-delta.neutral {
+  color: #75665a;
+}
+
+.result-theme-maple .hero-limit,
+.result-theme-maple .child-result-head,
+.result-theme-maple .score-delta.positive {
+  color: #8f3028;
+}
+
+.result-theme-maple .score-delta.negative {
+  color: #6e3b35;
+}
+
+.result-theme-maple .primary-block,
+.result-theme-maple .child-result {
+  border-color: #d4b782;
+  background: #f7ecda;
+}
+
+.result-theme-maple .block {
+  margin-top: 18rpx;
+  padding: 16rpx;
+  border: 1rpx solid #e1cfad;
+  border-radius: 8rpx;
+  background: rgba(255, 252, 244, 0.76);
+}
+
+.result-theme-maple .dora-line {
+  color: #7e2d27;
+}
+
+.result-theme-maple .score-rank {
+  color: #8a5a12;
+}
+
+.result-theme-maple .warning {
+  color: #8f3028;
 }

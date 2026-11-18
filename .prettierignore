@@ -6,4 +6,5 @@ coverage/
 docs/
 openspec/
 miniprogram/miniprogram_npm/
+miniprogram/shared/vendor/riichi-bundle.js
 package-lock.json

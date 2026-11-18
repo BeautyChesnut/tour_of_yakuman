@@ -1,4 +1,7 @@
-import Riichi from "riichi";
+import Riichi from "../vendor/riichi";
+import type RiichiPackage from "riichi";
+
+type RiichiResult = RiichiPackage.Result;
 
 export interface RiichiExpectedResult {
   isAgari: boolean;
@@ -22,7 +25,7 @@ export interface RiichiCompatibilityResult {
   passed: boolean;
   failures: string[];
   actual: Pick<
-    Riichi.Result,
+    RiichiResult,
     "isAgari" | "yakuman" | "yaku" | "han" | "fu" | "ten" | "name" | "text"
   >;
 }
@@ -138,7 +141,7 @@ export function runRiichiCompatibilityReport(
   };
 }
 
-function compareResult(result: Riichi.Result, expected: RiichiExpectedResult): string[] {
+function compareResult(result: RiichiResult, expected: RiichiExpectedResult): string[] {
   const failures: string[] = [];
 
   compareField(failures, "isAgari", result.isAgari, expected.isAgari);
